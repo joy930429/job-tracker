@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Joy's Job Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:#F7F7F5;color:#111;min-height:100vh;font-size:14px}
+.page{max-width:1500px;margin:0 auto;padding:2.5rem 2rem}
+.header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid #E8E8E4}
+.header h1{font-size:24px;font-weight:600;letter-spacing:-.02em}
+.header p{font-size:13px;color:#999;margin-top:2px}
+.header-right{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:7px 14px;border-radius:8px;border:1px solid #DDDDD8;background:#fff;cursor:pointer;color:#111;font-family:inherit;transition:background .12s}
+.btn:hover{background:#F2F2EF}
+.btn-primary{background:#111;color:#fff;border-color:#111}
+.btn-primary:hover{background:#333}
+
+/* tabs */
+.tabs{display:flex;gap:0;margin-bottom:1.75rem;border-bottom:1px solid #E8E8E4}
+.tab{font-size:13px;padding:9px 18px;cursor:pointer;border:none;background:none;color:#999;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s,border-color .12s}
+.tab:hover{color:#111}
+.tab.active{color:#111;font-weight:500;border-bottom-color:#111}
+
+/* panels */
+.panel{display:none}
+.panel.active{display:block}
+
+/* stats */
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem}
+.stat{background:#fff;border:1px solid #E8E8E4;border-radius:10px;padding:12px 18px;min-width:90px}
+.stat-label{font-size:11px;color:#aaa;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.stat-num{font-size:24px;font-weight:600;line-height:1}
+
+/* filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem}
+.filter-label{font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:.04em}
+.filter-select{font-size:12px;padding:6px 10px;border-radius:7px;border:1px solid #E0E0DA;background:#fff;cursor:pointer;color:#111;font-family:inherit}
+.filter-search{font-size:13px;padding:6px 12px;border-radius:7px;border:1px solid #E0E0DA;background:#fff;color:#111;font-family:inherit;min-width:160px}
+.filter-search:focus,.filter-select:focus{outline:none;border-color:#999}
+
+/* add form */
+.add-panel{background:#fff;border:1px solid #E8E8E4;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;display:none}
+.add-panel.open{display:block}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+.form-group input,.form-group select,.form-group textarea{font-size:13px;padding:7px 10px;border-radius:7px;border:1px solid #E0E0DA;background:#fff;color:#111;font-family:inherit;transition:border .12s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#999}
+.form-group textarea{resize:vertical;min-height:60px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;padding-top:4px}
+
+/* table */
+.table-card{background:#fff;border:1px solid #E8E8E4;border-radius:14px;overflow:hidden}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{font-size:11px;font-weight:500;color:#aaa;text-align:left;padding:11px 12px;background:#FAFAF8;border-bottom:1px solid #E8E8E4;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+tbody td{padding:9px 12px;border-bottom:1px solid #F2F2EF;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFAF8}
+
+/* inline edit */
+.ie{font-size:13px;background:transparent;border:1px solid transparent;border-radius:6px;padding:3px 6px;color:#111;font-family:inherit;width:100%;transition:border .12s,background .12s}
+.ie:hover{border-color:#E0E0DA;background:#F7F7F5}
+.ie:focus{outline:none;border-color:#999;background:#fff}
+
+/* status pills */
+.status-sel{font-size:11px;font-weight:500;padding:3px 10px;border-radius:99px;border:none;cursor:pointer;font-family:inherit;appearance:none;-webkit-appearance:none;text-align:center;transition:opacity .12s}
+.status-sel:hover{opacity:.8}
+.s-wishlist{background:#EEF2FF;color:#3730A3}
+.s-applied{background:#F0EEFF;color:#5B21B6}
+.s-interview{background:#FEF3C7;color:#92400E}
+.s-offer{background:#DCFCE7;color:#166534}
+.s-rejected{background:#FEE2E2;color:#991B1B}
+.s-ghosted{background:#F3F4F6;color:#6B7280}
+.s-recommended{background:#FFF0FB;color:#86198F}
+
+.icon-btn{background:none;border:none;cursor:pointer;color:#ccc;padding:4px 5px;border-radius:5px;font-size:16px;line-height:1;transition:color .12s,background .12s}
+.icon-btn:hover{color:#111;background:#F2F2EF}
+.empty-state{text-align:center;padding:4rem 2rem;color:#ccc}
+.empty-icon{font-size:2.5rem;margin-bottom:12px;opacity:.4}
+.empty-state p{font-size:14px}
+.footer{margin-top:1.25rem;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#bbb}
+
+/* reference panel */
+.resume-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.resume-card{background:#fff;border:1px solid #E8E8E4;border-radius:12px;padding:1.25rem}
+.resume-card-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.resume-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.resume-card h3{font-size:14px;font-weight:600;letter-spacing:-.01em;margin-bottom:2px}
+.resume-card .story{font-size:12px;color:#888;font-style:italic;margin-bottom:12px;line-height:1.5}
+.resume-section{margin-bottom:10px}
+.resume-section-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:#bbb;margin-bottom:5px}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid #EBEBEB;color:#555;background:#FAFAF8}
+.tag-title{font-size:11px;padding:2px 8px;border-radius:4px;background:#F3F4F6;color:#555}
+
+/* ── schedule ── */
+.sched-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px}
+.week-nav{display:flex;align-items:center;gap:10px}
+.week-label{font-size:15px;font-weight:500;min-width:220px;text-align:center}
+.nav-btn{background:#fff;border:1px solid #E0E0DA;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:14px;font-family:inherit;transition:background .12s}
+.nav-btn:hover{background:#F2F2EF}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.day-col{background:#fff;border:1px solid #E8E8E4;border-radius:12px;overflow:hidden}
+.day-head{padding:10px 12px;border-bottom:1px solid #F2F2EF;background:#FAFAF8}
+.day-name{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888}
+.day-date{font-size:11px;color:#bbb;margin-top:1px}
+.day-head.today-head .day-name{color:#111}
+.day-head.today-head .day-date{color:#5B21B6;font-weight:500}
+.day-head.today-head{background:#F5F3FF}
+.slot{padding:8px 10px;border-bottom:1px solid #F7F7F5}
+.slot:last-child{border-bottom:none}
+.slot-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.slot-morning .slot-label{color:#E07B00}
+.slot-afternoon .slot-label{color:#0070C9}
+.slot-night .slot-label{color:#5B21B6}
+.task-list{display:flex;flex-direction:column;gap:3px;min-height:16px}
+.task-item{display:flex;align-items:center;gap:5px;group}
+.task-chip{flex:1;font-size:11px;padding:3px 7px;border-radius:6px;display:flex;align-items:center;gap:4px;cursor:default;border:1px solid transparent}
+.task-chip.done{opacity:.45;text-decoration:line-through}
+.task-del{background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:0 2px;line-height:1;opacity:0;transition:opacity .1s}
+.task-item:hover .task-del{opacity:1}
+.task-done-btn{background:none;border:none;cursor:pointer;width:13px;height:13px;border-radius:3px;border:1.5px solid #ccc;flex-shrink:0;transition:background .12s,border-color .12s;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+.task-done-btn.checked{background:#5B21B6;border-color:#5B21B6}
+.add-task-row{padding:6px 10px 8px}
+.add-task-btn{width:100%;font-size:11px;color:#bbb;background:none;border:1px dashed #E0E0DA;border-radius:6px;padding:4px 8px;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .12s,color .12s}
+.add-task-btn:hover{border-color:#999;color:#666}
+
+/* task type colors */
+.tc-search{background:#EEF2FF;border-color:#C7D2FE!important;color:#3730A3}
+.tc-recruiter{background:#F0FDF4;border-color:#BBF7D0!important;color:#166534}
+.tc-email{background:#FFF7ED;border-color:#FED7AA!important;color:#C2410C}
+.tc-interview{background:#FFFBEB;border-color:#FDE68A!important;color:#92400E}
+.tc-coffee{background:#FDF4FF;border-color:#E9D5FF!important;color:#7E22CE}
+.tc-resume{background:#EFF6FF;border-color:#BFDBFE!important;color:#1D4ED8}
+.tc-write{background:#F0FDF4;border-color:#BBF7D0!important;color:#15803D}
+.tc-custom{background:#F9FAFB;border-color:#E5E7EB!important;color:#374151}
+
+/* add task modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border:1px solid #E8E8E4;border-radius:14px;padding:1.5rem;width:360px;max-width:94vw}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:1rem}
+.task-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.type-btn{font-size:12px;padding:7px 10px;border-radius:8px;border:1.5px solid transparent;cursor:pointer;font-family:inherit;text-align:left;transition:opacity .12s}
+.type-btn:hover{opacity:.8}
+.type-btn.selected{box-shadow:0 0 0 2px #111}
+.custom-row{display:flex;gap:6px;margin-bottom:14px}
+.custom-input{flex:1;font-size:13px;padding:7px 10px;border-radius:7px;border:1px solid #E0E0DA;font-family:inherit}
+.custom-input:focus{outline:none;border-color:#999}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+/* color per resume */
+.r1-num{background:#EEF2FF;color:#3730A3}
+.r1-tag{background:#EEF2FF!important;border-color:#C7D2FE!important;color:#3730A3!important}
+.r2-num{background:#FFF7ED;color:#C2410C}
+.r2-tag{background:#FFF7ED!important;border-color:#FED7AA!important;color:#C2410C!important}
+.r3-num{background:#F0FDF4;color:#166534}
+.r3-tag{background:#F0FDF4!important;border-color:#BBF7D0!important;color:#166534!important}
+.r4-num{background:#FFF0FB;color:#86198F}
+.r4-tag{background:#FFF0FB!important;border-color:#F0ABFC!important;color:#86198F!important}
+.r5-num{background:#FFF8F0;color:#92400E}
+.r5-tag{background:#FFF8F0!important;border-color:#FDE68A!important;color:#92400E!important}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>Job applications</h1>
+      <p>Chia-I (Joy) Yang &nbsp;·&nbsp; joyyangdesign.com</p>
+    </div>
+    <div class="header-right">
+      <button class="btn" onclick="toggleAdd()" id="add-btn">＋ Add job</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('tracker',this)">Tracker</button>
+    <button class="tab" onclick="switchTab('schedule',this)">Weekly schedule</button>
+    <button class="tab" onclick="switchTab('reference',this)">Resume reference</button>
+  </div>
+
+  <!-- TRACKER PANEL -->
+  <div class="panel active" id="panel-tracker">
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Total</div><div class="stat-num" id="s-total">0</div></div>
+      <div class="stat"><div class="stat-label">Recommended</div><div class="stat-num" id="s-recommended" style="color:#86198F">0</div></div>
+      <div class="stat"><div class="stat-label">Applied</div><div class="stat-num" id="s-applied" style="color:#5B21B6">0</div></div>
+      <div class="stat"><div class="stat-label">Interview</div><div class="stat-num" id="s-interview" style="color:#92400E">0</div></div>
+      <div class="stat"><div class="stat-label">Offer</div><div class="stat-num" id="s-offer" style="color:#166534">0</div></div>
+      <div class="stat"><div class="stat-label">Rejected</div><div class="stat-num" id="s-rejected" style="color:#991B1B">0</div></div>
+    </div>
+
+    <div class="add-panel" id="add-panel">
+      <div class="form-grid">
+        <div class="form-group"><label>Company *</label><input type="text" id="f-company" placeholder="e.g. Apple"></div>
+        <div class="form-group"><label>Job title *</label><input type="text" id="f-title" placeholder="e.g. Industrial Designer I"></div>
+        <div class="form-group"><label>Resume type</label>
+          <select id="f-resume">
+            <option value="">— select —</option>
+            <option>Consumer electronics / hardware</option>
+            <option>Industrial design consultancy</option>
+            <option>Product innovation and strategy</option>
+            <option>Startup</option>
+            <option>Product development</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1"><label>Status</label>
+          <select id="f-status" style="max-width:260px">
+            <option value="recommended">Recommended to apply</option>
+            <option value="wishlist">Wishlist</option>
+            <option value="applied">Applied</option>
+            <option value="interview">Interview</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+            <option value="ghosted">Ghosted</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date applied</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="text" id="f-date" placeholder="e.g. Jun 3" style="flex:1">
+            <button type="button" class="btn" style="white-space:nowrap;padding:6px 10px;font-size:12px" onclick="setToday()">Today</button>
+          </div>
+        </div>
+        <div class="form-group"><label>Application link</label><input type="text" id="f-link" placeholder="https://..."></div>
+        <div class="form-group"><label>Hiring manager email</label><input type="text" id="f-email" placeholder="name@company.com"></div>
+        <div class="form-group"><label>Location</label><input type="text" id="f-location" placeholder="e.g. Irvine, CA / Remote"></div>
+        <div class="form-group"><label>Deadline</label><input type="text" id="f-deadline" placeholder="e.g. Jun 30"></div>
+        <div class="form-group"><label>Contacted HM?</label>
+          <select id="f-contacted"><option value="no">No</option><option value="yes">Yes</option></select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px"><label>Notes</label>
+        <textarea id="f-notes" placeholder="Referral contact, next steps, impressions, follow-up date…"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="toggleAdd()">Cancel</button>
+        <button class="btn btn-primary" onclick="addJob()">Save job</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <span class="filter-label">Filter</span>
+      <select class="filter-select" id="fil-status" onchange="render()">
+        <option value="">All statuses</option>
+        <option value="recommended">Recommended to apply</option>
+        <option value="wishlist">Wishlist</option>
+        <option value="applied">Applied</option>
+        <option value="interview">Interview</option>
+        <option value="offer">Offer</option>
+        <option value="rejected">Rejected</option>
+        <option value="ghosted">Ghosted</option>
+      </select>
+      <select class="filter-select" id="fil-resume" onchange="render()">
+        <option value="">All resume types</option>
+        <option>Consumer electronics / hardware</option>
+        <option>Industrial design consultancy</option>
+        <option>Product innovation and strategy</option>
+        <option>Startup</option>
+        <option>Product development</option>
+      </select>
+      <select class="filter-select" id="fil-contacted" onchange="render()">
+        <option value="">Contacted: all</option>
+        <option value="yes">Contacted: yes</option>
+        <option value="no">Contacted: no</option>
+      </select>
+      <input class="filter-search" type="text" id="fil-search" oninput="render()" placeholder="Search company or title…">
+    </div>
+
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Company</th><th>Title</th><th>Resume type</th><th>Status</th>
+              <th>Date applied</th><th>Location</th><th>Deadline</th><th>Contacted HM</th>
+              <th>HM email</th><th>Link</th><th>Notes</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="job-tbody"></tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display:none">
+          <div class="empty-icon">📋</div>
+          <p>No applications match — try adjusting your filters.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Joy's job tracker</span>
+      <span id="sync-status" style="font-size:12px;color:#999">⟳ Loading…</span>
+      <span id="footer-count">0 applications</span>
+    </div>
+  </div>
+
+  <!-- SCHEDULE PANEL -->
+  <div class="panel" id="panel-schedule">
+    <div class="sched-header">
+      <div class="week-nav">
+        <button class="nav-btn" onclick="shiftWeek(-1)">← prev</button>
+        <span class="week-label" id="week-label"></span>
+        <button class="nav-btn" onclick="shiftWeek(1)">next →</button>
+      </div>
+      <button class="btn" onclick="goToday()">Today</button>
+    </div>
+    <div class="week-grid" id="week-grid"></div>
+  </div>
+
+  <!-- ADD TASK MODAL -->
+  <div class="modal-overlay" id="task-modal">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-title-label">Add task</div>
+      <div class="task-type-grid">
+        <button class="type-btn tc-search"    data-type="search"    onclick="selectType(this)">🔍 Look for jobs</button>
+        <button class="type-btn tc-recruiter" data-type="recruiter" onclick="selectType(this)">📞 Contact recruiters</button>
+        <button class="type-btn tc-email"     data-type="email"     onclick="selectType(this)">✉️ Reply to email</button>
+        <button class="type-btn tc-interview" data-type="interview" onclick="selectType(this)">🎤 Interview</button>
+        <button class="type-btn tc-coffee"    data-type="coffee"    onclick="selectType(this)">☕ Coffee chat</button>
+        <button class="type-btn tc-resume"    data-type="resume"    onclick="selectType(this)">📄 Edit / tailor resume</button>
+        <button class="type-btn tc-write"     data-type="write"     onclick="selectType(this)">✍️ Write email</button>
+        <button class="type-btn tc-custom"    data-type="custom"    onclick="selectType(this)">＋ Custom task</button>
+      </div>
+      <div class="custom-row" id="custom-row" style="display:none">
+        <input class="custom-input" id="custom-text" placeholder="Describe your task…" maxlength="80">
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeTaskModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmAddTask()">Add task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFERENCE PANEL -->
+  <div class="panel" id="panel-reference">
+    <div class="resume-grid">
+
+      <div class="resume-card">
+        <div class="resume-card-header">
+          <div class="resume-num r1-num">1</div>
+          <div><h3>Consumer electronics / hardware</h3></div>
+        </div>
+        <p class="story">"I design connected physical products that bridge human behavior and technology."</p>
+        <div class="resume-section">
+          <div class="resume-section-label">Target companies</div>
+          <div class="tag-wrap">
+            <span class="tag r1-tag">Garmin</span><span class="tag r1-tag">DJI</span><span class="tag r1-tag">Sony</span><span class="tag r1-tag">Samsung</span><span class="tag r1-tag">Bose</span><span class="tag r1-tag">Logitech</span><span class="tag r1-tag">Sonos</span><span class="tag r1-tag">Google Nest</span><span class="tag r1-tag">Meta Reality Labs</span><span class="tag r1-tag">Apple</span><span class="tag r1-tag">Ring</span><span class="tag r1-tag">Ecobee</span><span class="tag r1-tag">August</span><span class="tag r1-tag">Arlo</span><span class="tag r1-tag">Rabbit</span><span class="tag r1-tag">Hardware YC startups</span>
+          </div>
+        </div>
+        <div class="resume-section">
+          <div class="resume-section-label">Job titles to search</div>
+          <div class="tag-wrap">
+            <span class="tag-title">Industrial Designer</span><span class="tag-title">Product Designer (Hardware)</span><span class="tag-title">Consumer Electronics Designer</span><span class="tag-title">Connected Product Designer</span><span class="tag-title">Hardware UX Designer</span><span class="tag-title">Product Development Designer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resume-card">
+        <div class="resume-card-header">
+          <div class="resume-num r2-num">2</div>
+          <div><h3>Industrial design consultancy</h3></div>
+        </div>
+        <p class="story">"I translate research into manufacturable products through rigorous design development."</p>
+        <div class="resume-section">
+          <div class="resume-section-label">Target companies</div>
+          <div class="tag-wrap">
+            <span class="tag r2-tag">Speck Design</span><span class="tag r2-tag">Frog</span><span class="tag r2-tag">New Deal Design</span><span class="tag r2-tag">Smart Design</span><span class="tag r2-tag">Priority Designs</span><span class="tag r2-tag">Ammunition</span><span class="tag r2-tag">Design Continuum</span><span class="tag r2-tag">Whipsaw</span><span class="tag r2-tag">Fuseproject</span><span class="tag r2-tag">Radius Innovation</span>
+          </div>
+        </div>
+        <div class="resume-section">
+          <div class="resume-section-label">Job titles to search</div>
+          <div class="tag-wrap">
+            <span class="tag-title">Industrial Designer</span><span class="tag-title">Associate Industrial Designer</span><span class="tag-title">Product Designer</span><span class="tag-title">Industrial Design Consultant</span><span class="tag-title">Junior Industrial Designer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resume-card">
+        <div class="resume-card-header">
+          <div class="resume-num r3-num">3</div>
+          <div><h3>Product innovation and strategy</h3></div>
+        </div>
+        <p class="story">"I identify behavioral gaps and turn them into product opportunities."</p>
+        <div class="resume-section">
+          <div class="resume-section-label">Target companies</div>
+          <div class="tag-wrap">
+            <span class="tag r3-tag">IDEO</span><span class="tag r3-tag">Fjord</span><span class="tag r3-tag">Doblin</span><span class="tag r3-tag">BCG X</span><span class="tag r3-tag">Deloitte Digital</span><span class="tag r3-tag">Accenture Song</span><span class="tag r3-tag">Philips Innovation</span><span class="tag r3-tag">Samsung Design Strategy</span><span class="tag r3-tag">Internal innovation teams</span>
+          </div>
+        </div>
+        <div class="resume-section">
+          <div class="resume-section-label">Job titles to search</div>
+          <div class="tag-wrap">
+            <span class="tag-title">Product Designer</span><span class="tag-title">Innovation Designer</span><span class="tag-title">Design Strategist</span><span class="tag-title">Product Innovation Associate</span><span class="tag-title">Experience Designer</span><span class="tag-title">Service Designer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resume-card">
+        <div class="resume-card-header">
+          <div class="resume-num r4-num">4</div>
+          <div><h3>Startup / founding team</h3></div>
+        </div>
+        <p class="story">"I take products from idea to execution."</p>
+        <div class="resume-section">
+          <div class="resume-section-label">Target companies</div>
+          <div class="tag-wrap">
+            <span class="tag r4-tag">YC startups</span><span class="tag r4-tag">Seed-stage hardware startups</span><span class="tag r4-tag">Series A/B product companies</span><span class="tag r4-tag">Venture studios</span><span class="tag r4-tag">Nothing</span><span class="tag r4-tag">Teenage Engineering</span><span class="tag r4-tag">Rabbit</span><span class="tag r4-tag">Hardware AI startups</span><span class="tag r4-tag">Robotics startups</span>
+          </div>
+        </div>
+        <div class="resume-section">
+          <div class="resume-section-label">Job titles to search</div>
+          <div class="tag-wrap">
+            <span class="tag-title">Product Designer</span><span class="tag-title">Founding Designer</span><span class="tag-title">Product Design Engineer</span><span class="tag-title">Product Developer</span><span class="tag-title">Design Generalist</span><span class="tag-title">Innovation Associate</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="resume-card">
+        <div class="resume-card-header">
+          <div class="resume-num r5-num">5</div>
+          <div><h3>Product development / management</h3></div>
+        </div>
+        <p class="story">"I connect users, business, and technology."</p>
+        <div class="resume-section">
+          <div class="resume-section-label">Target companies</div>
+          <div class="tag-wrap">
+            <span class="tag r5-tag">SharkNinja</span><span class="tag r5-tag">KitchenAid</span><span class="tag r5-tag">Whirlpool</span><span class="tag r5-tag">Herman Miller</span><span class="tag r5-tag">Steelcase</span><span class="tag r5-tag">YETI</span><span class="tag r5-tag">Stanley</span><span class="tag r5-tag">Newell Brands</span><span class="tag r5-tag">Google</span><span class="tag r5-tag">Amazon Devices</span><span class="tag r5-tag">Microsoft</span><span class="tag r5-tag">Samsung</span>
+          </div>
+        </div>
+        <div class="resume-section">
+          <div class="resume-section-label">Job titles to search</div>
+          <div class="tag-wrap">
+            <span class="tag-title">Associate Product Manager</span><span class="tag-title">Product Development Associate</span><span class="tag-title">Product Specialist</span><span class="tag-title">Innovation Associate</span><span class="tag-title">Product Coordinator</span><span class="tag-title">Associate Producer</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const GS_URL = 'https://script.google.com/macros/s/AKfycbxQ_1ougIc8myWG5fkz5wz_FA-cVLnx6ta3fRhwCYPh4Ussx3PDNziPPdbTGQk9IF8Aqw/exec';
+let saveTimer = null;
+
+function showSyncStatus(state) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const map = {
+    loading: ['⟳ Loading…', '#999'],
+    saving:  ['⟳ Saving…', '#999'],
+    ok:      ['✓ Synced to Google Sheets', '#4caf50'],
+    error:   ['⚠ Sync failed — check connection', '#e53935'],
+  };
+  const [text, color] = map[state] || map.ok;
+  el.textContent = text; el.style.color = color;
+}
+
+const SEED = [
+  {
+    id: 1,
+    company: 'Kia Design Center America',
+    title: 'Designer I — Future Design Team',
+    resume: 'Consumer electronics / hardware',
+    status: 'applied',
+    link: '',
+    email: '',
+    location: 'Irvine, CA',
+    deadline: '',
+    date: 'May 26, 2026',
+    contacted: 'no',
+    notes: 'Exterior / interior advanced design, future concepts for US & global markets. Resume: Joy_Yang_Kia_Resume_v2.docx. Cover letter written in observational voice — surface-reading opening.'
+  },
+  {
+    id: 2,
+    company: 'Google',
+    title: 'Industrial Designer — Devices & Services',
+    resume: 'Consumer electronics / hardware',
+    status: 'applied',
+    link: '',
+    email: '',
+    location: 'Mountain View, CA',
+    deadline: '',
+    date: 'May 25, 2026',
+    contacted: 'no',
+    notes: 'Devices & Services team. Focus: trend research, CAD modeling, manufacturing execution. Salary $110k–$155k + equity. Cover letter: curious/impact-driven voice.'
+  }
+];
+
+let jobs = [];
+
+function cleanDate(val) {
+  if (!val) return '';
+  if (typeof val === 'string' && val.includes('T') && val.includes('Z')) {
+    const d = new Date(val);
+    if (!isNaN(d)) return MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear();
+  }
+  return val;
+}
+
+async function load() {
+  showSyncStatus('loading');
+  try {
+    const res = await fetch(GS_URL + '?action=loadJobs');
+    const data = await res.json();
+    if (data.jobs && data.jobs.length) {
+      jobs = data.jobs.map(j => ({...j, date: cleanDate(j.date)}));
+      showSyncStatus('ok');
+    } else {
+      jobs = SEED;
+      await syncJobs();
+    }
+  } catch(e) {
+    showSyncStatus('error');
+    jobs = SEED;
+  }
+  render();
+}
+
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(syncJobs, 800);
+}
+
+async function syncJobs() {
+  showSyncStatus('saving');
+  try {
+    const body = new URLSearchParams();
+    body.append('payload', JSON.stringify({action: 'saveJobs', jobs}));
+    await fetch(GS_URL, { method: 'POST', mode: 'no-cors', body });
+    showSyncStatus('ok');
+  } catch(e) {
+    showSyncStatus('error');
+  }
+}
+function escH(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setToday() {
+  const now = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('f-date').value = months[now.getMonth()] + ' ' + now.getDate();
+}
+
+function setTodayRow(i) {
+  const now = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const val = months[now.getMonth()] + ' ' + now.getDate();
+  const input = document.getElementById('date-field-' + i);
+  if (input) input.value = val;
+  setField(i, 'date', val);
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('add-btn').style.display = name === 'tracker' ? '' : 'none';
+  if (name === 'schedule') renderSchedule();
+}
+
+function toggleAdd() {
+  const p = document.getElementById('add-panel');
+  p.classList.toggle('open');
+  document.getElementById('add-btn').textContent = p.classList.contains('open') ? '✕ Cancel' : '＋ Add job';
+  if (p.classList.contains('open')) document.getElementById('f-company').focus();
+}
+
+function addJob() {
+  const company = document.getElementById('f-company').value.trim();
+  const title   = document.getElementById('f-title').value.trim();
+  if (!company || !title) { alert('Company and job title are required.'); return; }
+  jobs.push({
+    id: Date.now(), company, title,
+    resume:    document.getElementById('f-resume').value,
+    status:    document.getElementById('f-status').value,
+    link:      document.getElementById('f-link').value.trim(),
+    email:     document.getElementById('f-email').value.trim(),
+    location:  document.getElementById('f-location').value.trim(),
+    deadline:  document.getElementById('f-deadline').value.trim(),
+    date:      document.getElementById('f-date').value.trim(),
+    contacted: document.getElementById('f-contacted').value,
+    notes:     document.getElementById('f-notes').value.trim(),
+  });
+  ['f-company','f-title','f-link','f-email','f-location','f-deadline','f-date','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-resume').value    = '';
+  document.getElementById('f-status').value    = 'recommended';
+  document.getElementById('f-contacted').value = 'no';
+  save(); toggleAdd(); render();
+}
+
+function setField(i, field, val) { jobs[i][field] = val; save(); updateStats(); }
+
+function deleteJob(i) {
+  if (!confirm(`Remove "${jobs[i].company} — ${jobs[i].title}"?`)) return;
+  jobs.splice(i, 1); save(); render();
+}
+
+function updateStats() {
+  const c = {recommended:0,wishlist:0,applied:0,interview:0,offer:0,rejected:0,ghosted:0};
+  jobs.forEach(j => { if (c[j.status] !== undefined) c[j.status]++; });
+  document.getElementById('s-total').textContent       = jobs.length;
+  document.getElementById('s-recommended').textContent = c.recommended;
+  document.getElementById('s-applied').textContent     = c.applied;
+  document.getElementById('s-interview').textContent   = c.interview;
+  document.getElementById('s-offer').textContent       = c.offer;
+  document.getElementById('s-rejected').textContent    = c.rejected;
+  document.getElementById('footer-count').textContent  = jobs.length + ' application' + (jobs.length !== 1 ? 's' : '');
+}
+
+const STATUS_OPTS = ['recommended','wishlist','applied','interview','offer','rejected','ghosted'];
+const STATUS_LABELS = {
+  recommended: 'Recommended to apply',
+  wishlist: 'Wishlist',
+  applied: 'Applied',
+  interview: 'Interview',
+  offer: 'Offer',
+  rejected: 'Rejected',
+  ghosted: 'Ghosted'
+};
+const RESUME_OPTS = ['','Consumer electronics / hardware','Industrial design consultancy','Product innovation and strategy','Startup','Product development'];
+
+function render() {
+  const fS = document.getElementById('fil-status').value;
+  const fR = document.getElementById('fil-resume').value;
+  const fC = document.getElementById('fil-contacted').value;
+  const fQ = document.getElementById('fil-search').value.toLowerCase();
+
+  const filtered = jobs.map((j,i) => ({...j, _i:i})).filter(j => {
+    if (fS && j.status    !== fS) return false;
+    if (fR && j.resume    !== fR) return false;
+    if (fC && j.contacted !== fC) return false;
+    if (fQ && !j.company.toLowerCase().includes(fQ) && !j.title.toLowerCase().includes(fQ)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('job-tbody');
+  const empty = document.getElementById('empty-state');
+
+  if (!filtered.length) {
+    tbody.innerHTML = ''; empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = filtered.map(j => {
+      const i = j._i;
+      const sOpts = STATUS_OPTS.map(s => `<option value="${s}"${j.status===s?' selected':''}>${STATUS_LABELS[s]}</option>`).join('');
+      const rOpts = RESUME_OPTS.map(r => `<option value="${r}"${j.resume===r?' selected':''}>${r||'— none —'}</option>`).join('');
+      const linkCell = j.link ? `<a href="${escH(j.link)}" target="_blank" style="color:#5B21B6;font-size:12px;text-decoration:none;border-bottom:1px solid #DDD9FF">↗ open</a><br>` : '';
+      return `<tr>
+        <td><input class="ie" value="${escH(j.company)}" onchange="setField(${i},'company',this.value)" style="font-weight:500;min-width:120px"></td>
+        <td><input class="ie" value="${escH(j.title)}" onchange="setField(${i},'title',this.value)" style="min-width:150px"></td>
+        <td><select class="ie" onchange="setField(${i},'resume',this.value)" style="min-width:160px;font-size:12px;color:#666">${rOpts}</select></td>
+        <td><select class="status-sel s-${j.status}" onchange="setField(${i},'status',this.value);this.className='status-sel s-'+this.value" style="min-width:80px">${sOpts}</select></td>
+        <td style="white-space:nowrap"><input class="ie" id="date-field-${i}" value="${escH(j.date)}" placeholder="—" onchange="setField(${i},'date',this.value)" style="min-width:60px;color:#666;width:auto;display:inline-block"> <button class="icon-btn" style="font-size:10px;padding:2px 6px;border:1px solid #E0E0DA;border-radius:5px;color:#999" onclick="setTodayRow(${i})" title="Set to today">today</button></td>
+        <td><input class="ie" value="${escH(j.location)}" placeholder="—" onchange="setField(${i},'location',this.value)" style="min-width:90px;color:#666"></td>
+        <td><input class="ie" value="${escH(j.deadline)}" placeholder="—" onchange="setField(${i},'deadline',this.value)" style="min-width:70px;color:#666"></td>
+        <td><select class="ie" onchange="setField(${i},'contacted',this.value)" style="font-size:12px;min-width:55px">
+          <option value="no"${j.contacted==='no'?' selected':''}>No</option>
+          <option value="yes"${j.contacted==='yes'?' selected':''}>Yes</option>
+        </select></td>
+        <td><input class="ie" value="${escH(j.email)}" placeholder="—" onchange="setField(${i},'email',this.value)" style="min-width:140px;font-size:12px"></td>
+        <td>${linkCell}<input class="ie" value="${escH(j.link)}" placeholder="paste url…" onchange="setField(${i},'link',this.value)" style="min-width:80px;font-size:11px;color:#aaa;margin-top:2px"></td>
+        <td><input class="ie" value="${escH(j.notes)}" placeholder="—" onchange="setField(${i},'notes',this.value)" style="min-width:170px;color:#666;font-size:12px" title="${escH(j.notes)}"></td>
+        <td><button class="icon-btn" onclick="deleteJob(${i})" title="Delete">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+  updateStats();
+}
+
+// ── SCHEDULE ──────────────────────────────────────────────
+const SCHED_KEY = 'joy_schedule_v1';
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const SLOTS = ['morning','afternoon','night'];
+const SLOT_LABELS = {morning:'Morning',afternoon:'Afternoon',night:'Night'};
+
+const TASK_TYPES = {
+  search:    {label:'Look for jobs',        cls:'tc-search'},
+  recruiter: {label:'Contact recruiters',   cls:'tc-recruiter'},
+  email:     {label:'Reply to email',       cls:'tc-email'},
+  interview: {label:'Interview',            cls:'tc-interview'},
+  coffee:    {label:'Coffee chat',          cls:'tc-coffee'},
+  resume:    {label:'Edit / tailor resume', cls:'tc-resume'},
+  write:     {label:'Write email',          cls:'tc-write'},
+  custom:    {label:'Custom',               cls:'tc-custom'},
+};
+
+let schedData = {};
+let weekOffset = 0;
+let pendingSlot = null;
+let selectedType = null;
+let schedSaveTimer = null;
+
+function schedSave() {
+  clearTimeout(schedSaveTimer);
+  schedSaveTimer = setTimeout(async () => {
+    try {
+      const body = new URLSearchParams();
+      body.append('payload', JSON.stringify({action: 'saveSched', sched: schedData}));
+      await fetch(GS_URL, { method: 'POST', mode: 'no-cors', body });
+    } catch(e) {}
+  }, 800);
+}
+
+async function schedLoad() {
+  try {
+    const res = await fetch(GS_URL + '?action=loadSched');
+    const data = await res.json();
+    if (data.sched) schedData = data.sched;
+  } catch(e) {}
+}
+
+function getWeekStart(offset) {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day + 1 + offset*7); // week starts Monday
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function dateKey(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function slotKey(dKey, slot) { return dKey+'|'+slot; }
+
+function shiftWeek(dir) { weekOffset += dir; renderSchedule(); }
+function goToday()      { weekOffset = 0;   renderSchedule(); }
+
+function renderSchedule() {
+  const ws = getWeekStart(weekOffset);
+  const we = new Date(ws); we.setDate(ws.getDate()+6);
+  document.getElementById('week-label').textContent =
+    MONTHS[ws.getMonth()]+' '+ws.getDate()+' – '+MONTHS[we.getMonth()]+' '+we.getDate()+', '+we.getFullYear();
+
+  const today = dateKey(new Date());
+  const grid  = document.getElementById('week-grid');
+  grid.innerHTML = '';
+
+  for(let i=0; i<7; i++) {
+    const d = new Date(ws); d.setDate(ws.getDate()+i);
+    const dk = dateKey(d);
+    const isToday = dk === today;
+
+    const col = document.createElement('div');
+    col.className = 'day-col';
+
+    const head = document.createElement('div');
+    head.className = 'day-head' + (isToday ? ' today-head' : '');
+    head.innerHTML = `<div class="day-name">${DAYS[d.getDay()]}</div><div class="day-date">${MONTHS[d.getMonth()]} ${d.getDate()}</div>`;
+    col.appendChild(head);
+
+    SLOTS.forEach(slot => {
+      const key  = slotKey(dk, slot);
+      const tasks = schedData[key] || [];
+
+      const sec = document.createElement('div');
+      sec.className = 'slot slot-'+slot;
+      sec.innerHTML = `<div class="slot-label">${SLOT_LABELS[slot]}</div><div class="task-list" id="tl-${key}"></div>`;
+      col.appendChild(sec);
+
+      const addRow = document.createElement('div');
+      addRow.className = 'add-task-row';
+      addRow.innerHTML = `<button class="add-task-btn" onclick="openTaskModal('${dk}','${slot}')">＋ add</button>`;
+      col.appendChild(addRow);
+
+      // render tasks
+      const tl = sec.querySelector('.task-list');
+      tasks.forEach(t => renderTask(tl, key, t));
+    });
+
+    grid.appendChild(col);
+  }
+}
+
+function renderTask(container, key, task) {
+  const info = TASK_TYPES[task.type] || TASK_TYPES.custom;
+  const div = document.createElement('div');
+  div.className = 'task-item';
+  div.id = 'ti-'+task.id;
+  div.innerHTML = `
+    <button class="task-done-btn${task.done?' checked':''}" onclick="toggleDone('${key}',${task.id})" title="Mark done">${task.done?'✓':''}</button>
+    <div class="task-chip ${info.cls}${task.done?' done':''}" title="${task.label}">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90px">${task.label}</span>
+    </div>
+    <button class="task-del" onclick="deleteTask('${key}',${task.id})" title="Remove">✕</button>`;
+  container.appendChild(div);
+}
+
+function openTaskModal(dk, slot) {
+  pendingSlot = {dk, slot};
+  selectedType = null;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('custom-row').style.display = 'none';
+  document.getElementById('custom-text').value = '';
+  document.getElementById('modal-title-label').textContent =
+    'Add task — '+DAYS[new Date(dk+'T12:00:00').getDay()]+' '+SLOT_LABELS[slot];
+  document.getElementById('task-modal').classList.add('open');
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').classList.remove('open');
+  pendingSlot = null; selectedType = null;
+}
+
+function selectType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedType = btn.dataset.type;
+  document.getElementById('custom-row').style.display = selectedType === 'custom' ? 'flex' : 'none';
+}
+
+function confirmAddTask() {
+  if(!selectedType) { alert('Please select a task type.'); return; }
+  if(!pendingSlot)  return;
+
+  let label = TASK_TYPES[selectedType]?.label || 'Task';
+  if(selectedType === 'custom') {
+    const txt = document.getElementById('custom-text').value.trim();
+    if(!txt) { alert('Please describe your custom task.'); return; }
+    label = txt;
+  }
+
+  const key = slotKey(pendingSlot.dk, pendingSlot.slot);
+  if(!schedData[key]) schedData[key] = [];
+  schedData[key].push({id: Date.now(), type: selectedType, label, done: false});
+  schedSave();
+
+  const tl = document.getElementById('tl-'+key);
+  if(tl) renderTask(tl, key, schedData[key][schedData[key].length-1]);
+
+  closeTaskModal();
+}
+
+function toggleDone(key, id) {
+  if(!schedData[key]) return;
+  const t = schedData[key].find(x => x.id === id);
+  if(t) { t.done = !t.done; schedSave(); }
+  const item = document.getElementById('ti-'+id);
+  if(!item) return;
+  const chip = item.querySelector('.task-chip');
+  const btn  = item.querySelector('.task-done-btn');
+  if(t.done){ chip.classList.add('done'); btn.classList.add('checked'); btn.textContent='✓'; }
+  else       { chip.classList.remove('done'); btn.classList.remove('checked'); btn.textContent=''; }
+}
+
+function deleteTask(key, id) {
+  if(!schedData[key]) return;
+  schedData[key] = schedData[key].filter(x => x.id !== id);
+  schedSave();
+  const item = document.getElementById('ti-'+id);
+  if(item) item.remove();
+}
+
+schedLoad().then(() => { /* schedule loaded */ });
+load();
+</script>
+</body>
+</html>
